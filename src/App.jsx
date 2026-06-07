@@ -6,14 +6,36 @@ const ANSWER_KEY = [
   'AC', 'CD', 'BD', 'AD', 'BC', 'CD', 'AD', 'BC', 'AD', 'AC',
 ]
 
-const QUESTIONS = ANSWER_KEY.map((correct, index) => ({
-  id: index + 1,
+const EXAM_QUESTIONS = ANSWER_KEY.map((correct, index) => ({
   image: `/questions/q${String(index + 1).padStart(2, '0')}.png`,
   context: index === 5 || index === 6 ? '/questions/context-06-07.png' : null,
   correct: correct.split(''),
+  source: 'Egzamin 2022',
 }))
 
-const ANSWERS = ['A', 'B', 'C', 'D']
+const BAZA_QUESTION_DATA = [
+  [1, 'AD'], [3, 'AB'], [4, 'AD'], [5, 'CD'], [6, 'AD'], [7, 'CD'],
+  [8, 'AB'], [9, 'BC'], [10, 'BC'], [11, 'AC'], [12, 'BD'], [13, 'AC'],
+  [15, 'CD'], [28, 'BD'], [31, 'CD'], [35, 'AC'], [42, 'AD'], [45, 'BD'],
+  [50, 'AC'], [58, 'B'], [60, 'C'], [63, 'C'], [70, 'BD'], [73, 'B'],
+]
+
+const BAZA_QUESTIONS = BAZA_QUESTION_DATA.map(([sourceNumber, correct]) => ({
+  image: `/questions/baza-${String(sourceNumber).padStart(2, '0')}.png`,
+  context: sourceNumber === 58 || sourceNumber === 60
+    ? '/questions/context-06-07.png'
+    : null,
+  correct: correct.split(''),
+  choices: sourceNumber === 63 ? ['A', 'B', 'C'] : undefined,
+  source: `IS_BAZA nr ${sourceNumber}`,
+}))
+
+const QUESTIONS = [...EXAM_QUESTIONS, ...BAZA_QUESTIONS].map((question, index) => ({
+  ...question,
+  id: index + 1,
+}))
+
+const DEFAULT_ANSWERS = ['A', 'B', 'C', 'D']
 const ACTIVE_KEY = 'egzamin-is-active'
 const HISTORY_KEY = 'egzamin-is-history'
 
@@ -101,7 +123,8 @@ function App() {
         ? selected.filter((item) => item !== answer)
         : [...selected, answer].sort()
 
-      if (next.length === 2) {
+      const requiredAnswers = QUESTIONS.find(({ id }) => id === questionId).correct.length
+      if (next.length === requiredAnswers) {
         setChecked((currentChecked) => ({ ...currentChecked, [questionId]: true }))
       }
 
@@ -147,7 +170,10 @@ function App() {
         <section className="hero">
           <span className="eyebrow">Identyfikacja systemów</span>
           <h1>Egzamin IS</h1>
-          <p>30 pytań z egzaminu 2022. W każdym pytaniu wybierz wszystkie poprawne odpowiedzi.</p>
+          <p>
+            {QUESTIONS.length} unikalne pytania z egzaminu 2022 i bazy IS.
+            W każdym pytaniu wybierz wszystkie poprawne odpowiedzi.
+          </p>
           <button className="primary large" onClick={startQuiz}>
             {saved ? 'Zacznij od nowa' : 'Rozpocznij test'}
           </button>
@@ -239,19 +265,19 @@ function App() {
       <header className="topbar">
         <button className="brand" onClick={() => setScreen(result ? 'result' : 'home')}>Egzamin IS</button>
         <div className="topbar-stats">
-          {!isReview && <span>{answeredCount}/30 odpowiedziano</span>}
+          {!isReview && <span>{answeredCount}/{QUESTIONS.length} odpowiedziano</span>}
           {!isReview && <span>{formatDuration(elapsed)}</span>}
           {isReview && <span>Podgląd wyniku</span>}
         </div>
       </header>
 
-      <div className="progress" aria-label={`Pytanie ${question.id} z 30`}>
+      <div className="progress" aria-label={`Pytanie ${question.id} z ${QUESTIONS.length}`}>
         <div style={{ width: `${((current + 1) / QUESTIONS.length) * 100}%` }} />
       </div>
 
       <section className="question-card">
         <div className="question-meta">
-          <span>Pytanie {question.id} z {QUESTIONS.length}</span>
+          <span>Pytanie {question.id} z {QUESTIONS.length} · {question.source}</span>
           {isChecked && (
             <span className={isCurrentCorrect ? 'status-correct' : 'status-wrong'}>
               {isCurrentCorrect ? 'Poprawnie' : 'Błędnie'}
@@ -265,7 +291,7 @@ function App() {
         <img className="question-image" src={question.image} alt={`Treść pytania ${question.id}`} />
 
         <div className="answer-grid">
-          {ANSWERS.map((answer) => {
+          {(question.choices ?? DEFAULT_ANSWERS).map((answer) => {
             const isSelected = selected.includes(answer)
             const isCorrect = isChecked && question.correct.includes(answer)
             const isWrong = isChecked && isSelected && !isCorrect
@@ -291,7 +317,7 @@ function App() {
             ? isCurrentCorrect
               ? 'Dobra odpowiedź.'
               : `Poprawne odpowiedzi: ${question.correct.join(', ')}.`
-            : 'Zaznacz dwie odpowiedzi. Wynik pojawi się od razu.'}
+            : `Zaznacz ${question.correct.length === 1 ? 'jedną odpowiedź' : 'dwie odpowiedzi'}. Wynik pojawi się od razu.`}
         </p>
 
         <nav className="navigation">
